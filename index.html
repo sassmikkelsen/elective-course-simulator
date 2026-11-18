@@ -15,8 +15,6 @@
   --sks: #dc2626;
   --pf-light: #dbeafe;
   --sks-light: #fee2e2;
-  --warn: #d97706;
-  --warn-bg: #fefce8;
   --err: #dc2626;
   --err-bg: #fef2f2;
   --ok: #16a34a;
@@ -34,7 +32,6 @@
     --sks: #f87171;
     --pf-light: #1e3356;
     --sks-light: #561e1e;
-    --warn-bg: #422006;
     --err-bg: #450a0a;
     --ok-bg: #052e16;
   }
@@ -68,13 +65,17 @@ input[type=number]:focus{outline:2px solid var(--pf);border-color:transparent}
 .run-btn:hover{opacity:.9}
 .run-btn:focus{outline:3px solid var(--pf);outline-offset:2px}
 
+/* Line chart inside params card */
+.line-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.line-section h3{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:8px}
+
 /* Tables */
 .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:.82rem}
 th{background:var(--bg);padding:7px 10px;text-align:right;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap}
-th:first-child,th.lft{text-align:left}
+th.lft{text-align:left}
 td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:right}
-td:first-child,td.lft{text-align:left}
+td.lft{text-align:left}
 tr:last-child td{border-bottom:none}
 tr.sel td{background:var(--pf-light)}
 tr.infeas td{background:var(--err-bg)}
@@ -82,20 +83,23 @@ tr.infeas td{background:var(--err-bg)}
 .sksc{color:var(--sks);font-weight:600}
 .ok-b{display:inline-block;background:var(--ok-bg);color:var(--ok);border-radius:3px;font-size:.7rem;padding:1px 5px}
 .err-b{display:inline-block;background:var(--err-bg);color:var(--err);border-radius:3px;font-size:.7rem;padding:1px 5px;border:1px solid var(--err)}
-.warn-b{display:inline-block;background:var(--warn-bg);color:var(--warn);border-radius:3px;font-size:.7rem;padding:1px 5px;border:1px solid var(--warn)}
+.warn-b{display:inline-block;background:#fefce8;color:#d97706;border-radius:3px;font-size:.7rem;padding:1px 5px;border:1px solid #d97706}
+@media(prefers-color-scheme:dark){
+  .warn-b{background:#422006;color:#fbbf24;border-color:#92400e}
+  :root:not([data-theme=light]) .warn-b{background:#422006;color:#fbbf24;border-color:#92400e}
+}
 
 /* Breakdown grid */
 .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:720px){.bgrid{grid-template-columns:1fr}}
 
 /* Tabs */
-.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:14px;gap:0}
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:14px}
 .tab{background:none;border:none;padding:7px 16px;font-size:.88rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px}
 .tab.on{color:var(--pf);border-bottom-color:var(--pf);font-weight:600}
 
-/* Chart */
-.chart-wrap{overflow-x:auto}
-.legend{display:flex;gap:16px;margin-top:8px;font-size:.82rem}
+/* Legend */
+.legend{display:flex;gap:16px;margin-top:8px;font-size:.82rem;flex-wrap:wrap}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .swatch{width:13px;height:13px;border-radius:2px;display:inline-block}
 
@@ -166,7 +170,17 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0}
     </div>
   </div>
   <div id="ctrl-err" style="color:var(--err);font-size:.82rem;margin-top:8px;display:none"></div>
-  <button class="run-btn" onclick="runSim()">Run simulation</button>
+  <button class="run-btn" id="run-btn">Run simulation</button>
+
+  <div class="line-section" id="line-section">
+    <h3>Total offerings by annual intake</h3>
+    <div id="line-wrap" style="max-width:700px"></div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--pf)"></span>PF total</span>
+      <span><span class="swatch" style="background:#93c5fd;border:1px dashed var(--pf)"></span>PF 5-ECTS</span>
+      <span><span class="swatch" style="background:var(--sks)"></span>SKS total</span>
+    </div>
+  </div>
 </div>
 
 <div class="card">
@@ -174,15 +188,15 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0}
   <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Click a row to select that intake for the breakdown below.</p>
   <div class="twrap" id="tbl-annual"></div>
   <div class="note">
-    <strong>Pooling logic:</strong> Within each programme, 10-ECTS elective demands from different study semesters that fall in the same calendar term (autumn or spring) are pooled. 5-ECTS demands are pooled separately. Offerings = number of course sections that satisfy the enrollment window [min, max] and timetable constraints. Autumn = odd semesters; Spring = even semesters.
+    <strong>Pooling:</strong> Within each programme, elective demands from study semesters that fall in the same calendar term are pooled by ECTS type. 5-ECTS and 10-ECTS pools are kept separate. PF autumn 5-ECTS includes Valgkursus (sem 3) and Videregående metode (sems 7, 9). PF spring 5-ECTS includes Valgkursus (sem 6) and Videregående metode (sem 8). Autumn = odd semesters; Spring = even semesters.
   </div>
 </div>
 
 <div class="card">
   <h2 id="breakdown-title">Semester breakdown — intake 75</h2>
   <div class="tabs">
-    <button class="tab on" id="tab-sem" onclick="showTab('sem')">Semester detail</button>
-    <button class="tab" id="tab-pools" onclick="showTab('pools')">Calendar pools</button>
+    <button class="tab on" id="tab-sem">Semester detail</button>
+    <button class="tab" id="tab-pools">Calendar pools</button>
   </div>
   <div id="panel-sem"><div class="bgrid" id="sem-grid"></div></div>
   <div id="panel-pools" style="display:none"><div id="pools-content"></div></div>
@@ -190,16 +204,16 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0}
 
 <div class="card">
   <h2 id="chart-title">Offerings by calendar pool — intake 75</h2>
-  <div class="chart-wrap" id="chart-wrap"></div>
-  <div class="legend">
-    <span><span class="swatch" style="background:var(--pf)"></span>PF (Politik og Forvaltning)</span>
-    <span><span class="swatch" style="background:var(--sks)"></span>SKS (Statskundskab)</span>
+  <div style="overflow-x:auto" id="bar-wrap"></div>
+  <div class="legend" style="margin-top:8px">
+    <span><span class="swatch" style="background:var(--pf)"></span>PF</span>
+    <span><span class="swatch" style="background:var(--sks)"></span>SKS</span>
   </div>
 </div>
 
 <div class="btn-row">
-  <button class="exp-btn" onclick="doExport('annual')">Export annual summary (CSV)</button>
-  <button class="exp-btn" onclick="doExport('detail')">Export semester detail (CSV)</button>
+  <button class="exp-btn" id="exp-annual">Export annual summary (CSV)</button>
+  <button class="exp-btn" id="exp-detail">Export semester detail (CSV)</button>
 </div>
 
 <div class="card">
@@ -211,455 +225,676 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0}
 
 </main>
 <script>
+(function() {
+'use strict';
+
 // ── Programme definitions ──────────────────────────────────────
-const PROG = {
+// PF: updated to include Videregående metode as 5-ECTS electives in sems 7, 8, 9
+var PROG = {
   PF: {
     label: 'PF (Politik og Forvaltning)',
     electives: [
-      {sem:3, ects:5, slots:1},
-      {sem:6, ects:5, slots:1},
-      {sem:7, ects:10, slots:1},
-      {sem:8, ects:10, slots:1},
-      {sem:9, ects:10, slots:1}
+      {sem:3,  ects:5,  slots:1, name:'Valgkursus'},
+      {sem:6,  ects:5,  slots:1, name:'Valgkursus'},
+      {sem:7,  ects:10, slots:1, name:'Specialiseringskursus'},
+      {sem:7,  ects:5,  slots:2, name:'Videregående metode (×2)'},
+      {sem:8,  ects:10, slots:1, name:'Specialiseringskursus'},
+      {sem:8,  ects:5,  slots:1, name:'Videregående metode'},
+      {sem:9,  ects:10, slots:1, name:'Specialiseringskursus'},
+      {sem:9,  ects:5,  slots:1, name:'Videregående metode'}
     ]
   },
   SKS: {
     label: 'SKS (Statskundskab)',
     electives: [
-      {sem:5, ects:10, slots:1},
-      {sem:7, ects:10, slots:2},
-      {sem:8, ects:10, slots:3},
-      {sem:9, ects:10, slots:3}
+      {sem:5,  ects:10, slots:1, name:'Valgfag'},
+      {sem:7,  ects:10, slots:2, name:'Valgfag (×2)'},
+      {sem:8,  ects:10, slots:3, name:'Valgfag (×3)'},
+      {sem:9,  ects:10, slots:3, name:'Valgfag (×3)'}
     ]
   }
 };
 
 function acYear(sem){ return Math.ceil(sem/2); }
-function term(sem){ return sem%2===1 ? 'Autumn' : 'Spring'; }
+function termOf(sem){ return sem % 2 === 1 ? 'Autumn' : 'Spring'; }
 
 // ── Cohort size ────────────────────────────────────────────────
-function cohortSize(intake, year, dropPct, dTime){
-  if(dropPct<=0) return intake;
-  if(dTime==='year') return intake * Math.pow(1 - dropPct/100, year-1);
-  const sems = (year-1)*2;
-  return intake * Math.pow(1 - dropPct/200, sems);
+function cohortSize(intake, year, dropPct, dTime) {
+  if (dropPct <= 0) return intake;
+  if (dTime === 'year') return intake * Math.pow(1 - dropPct / 100, year - 1);
+  var sems = (year - 1) * 2;
+  return intake * Math.pow(1 - dropPct / 200, sems);
 }
 
-// ── Core: offerings for a pool ─────────────────────────────────
-function offeringsForPool(S, maxK, minE, maxE, obj){
-  if(S<=0) return {c:0, feasible:true, note:''};
-  const cMinCap = Math.ceil(S / maxE);
-  const cMaxCap = Math.floor(S / minE);
-  const cMin = Math.max(cMinCap, maxK);
-  if(cMin > cMaxCap || cMaxCap < 1){
+// ── Offerings for a demand pool ────────────────────────────────
+function offeringsForPool(S, maxK, minE, maxE, obj) {
+  if (S <= 0) return {c:0, feasible:true, note:''};
+  var cMinCap = Math.ceil(S / maxE);
+  var cMaxCap = Math.floor(S / minE);
+  var cMin = Math.max(cMinCap, maxK);
+  if (cMin > cMaxCap || cMaxCap < 1) {
     return {
       c: cMin,
       feasible: false,
-      note: `Infeasible: need ≥${cMin} sections (enrollment/timetable) but max feasible is ${Math.max(0,cMaxCap)} (S=${S.toFixed(1)}, bounds [${minE},${maxE}])`
+      note: 'Infeasible: need ≥' + cMin + ' sections (enrollment/timetable) but capacity allows at most ' +
+            Math.max(0, cMaxCap) + ' (S=' + S.toFixed(1) + ', bounds [' + minE + ',' + maxE + '])'
     };
   }
-  return {c: obj==='max' ? cMaxCap : cMin, feasible:true, note:''};
+  return {c: obj === 'max' ? cMaxCap : cMin, feasible: true, note: ''};
 }
 
 // ── Simulate one intake ────────────────────────────────────────
-function simOne(intake, p){
-  const {minE, maxE, obj, dropPct, dTime, internPct} = p;
-  const out = {};
+function simOne(intake, p) {
+  var minE = p.minE, maxE = p.maxE, obj = p.obj;
+  var dropPct = p.dropPct, dTime = p.dTime, internPct = p.internPct;
+  var out = {};
 
-  for(const [key, prog] of Object.entries(PROG)){
-    const semRows = prog.electives.map(e => {
-      const yr = acYear(e.sem);
-      const raw = cohortSize(intake, yr, dropPct, dTime);
-      let active = raw, internNote = '';
-      if(e.sem===9){
-        active = Math.round(raw * (1 - internPct/100));
-        internNote = `${(raw-active).toFixed(1)} on internship; active=${active} (Math.round)`;
+  var progKeys = Object.keys(PROG);
+  for (var ki = 0; ki < progKeys.length; ki++) {
+    var key = progKeys[ki];
+    var prog = PROG[key];
+    var semRows = [];
+
+    for (var ei = 0; ei < prog.electives.length; ei++) {
+      var e = prog.electives[ei];
+      var yr = acYear(e.sem);
+      var trm = termOf(e.sem);
+      var raw = cohortSize(intake, yr, dropPct, dTime);
+      var active = raw;
+      var internNote = '';
+      if (e.sem === 9) {
+        active = Math.round(raw * (1 - internPct / 100));
+        internNote = (raw - active).toFixed(1) + ' on internship (' + internPct + '%); active=' + active + ' (Math.round)';
       }
-      return {sem:e.sem, yr, term:term(e.sem), ects:e.ects, slots:e.slots, raw, active, seats:active*e.slots, internNote};
-    });
+      semRows.push({
+        sem: e.sem, yr: yr, term: trm, ects: e.ects,
+        slots: e.slots, name: e.name,
+        raw: raw, active: active,
+        seats: active * e.slots, internNote: internNote
+      });
+    }
 
     // Pool by term+ects
-    const pools = {};
-    for(const r of semRows){
-      const pk = `${r.term}-${r.ects}`;
-      if(!pools[pk]) pools[pk] = {term:r.term, ects:r.ects, seats:0, sems:[], maxK:0};
+    var pools = {};
+    for (var ri = 0; ri < semRows.length; ri++) {
+      var r = semRows[ri];
+      var pk = r.term + '-' + r.ects;
+      if (!pools[pk]) {
+        pools[pk] = {term: r.term, ects: r.ects, seats: 0, sems: [], maxK: 0};
+      }
       pools[pk].seats += r.seats;
       pools[pk].sems.push(r.sem);
-      pools[pk].maxK = Math.max(pools[pk].maxK, r.slots);
+      if (r.slots > pools[pk].maxK) pools[pk].maxK = r.slots;
     }
 
     // Compute offerings per pool
-    let totalC=0, totalEcts=0, anyInfeas=false;
-    const poolRes = {};
-    for(const [pk, pool] of Object.entries(pools)){
-      const res = offeringsForPool(pool.seats, pool.maxK, minE, maxE, obj);
-      poolRes[pk] = {...pool, ...res};
+    var totalC = 0, totalEcts = 0, anyInfeas = false;
+    var total5 = 0, total10 = 0;
+    var poolRes = {};
+    var pks = Object.keys(pools);
+    for (var pi = 0; pi < pks.length; pi++) {
+      var ppk = pks[pi];
+      var pool = pools[ppk];
+      var res = offeringsForPool(pool.seats, pool.maxK, minE, maxE, obj);
+      poolRes[ppk] = {
+        term: pool.term, ects: pool.ects, seats: pool.seats,
+        sems: pool.sems, maxK: pool.maxK,
+        c: res.c, feasible: res.feasible, note: res.note
+      };
       totalC += res.c;
       totalEcts += res.c * pool.ects;
-      if(!res.feasible) anyInfeas = true;
+      if (pool.ects === 5) total5 += res.c;
+      else total10 += res.c;
+      if (!res.feasible) anyInfeas = true;
     }
 
-    const autC = Object.entries(poolRes).filter(([k])=>k.startsWith('Autumn')).reduce((s,[,r])=>s+r.c,0);
-    const sprC = Object.entries(poolRes).filter(([k])=>k.startsWith('Spring')).reduce((s,[,r])=>s+r.c,0);
+    var autC = 0, sprC = 0;
+    var ppks2 = Object.keys(poolRes);
+    for (var ai = 0; ai < ppks2.length; ai++) {
+      var pp2 = ppks2[ai];
+      if (pp2.indexOf('Autumn') === 0) autC += poolRes[pp2].c;
+      else sprC += poolRes[pp2].c;
+    }
 
-    out[key] = {semRows, poolRes, totalC, totalEcts, autC, sprC, anyInfeas};
+    out[key] = {semRows: semRows, poolRes: poolRes, totalC: totalC, totalEcts: totalEcts,
+                total5: total5, total10: total10,
+                autC: autC, sprC: sprC, anyInfeas: anyInfeas};
   }
-  return {intake, ...out};
+  return {intake: intake, PF: out.PF, SKS: out.SKS};
 }
 
 // ── Global state ───────────────────────────────────────────────
-let gAll = null;
-let gSel = 75;
-let gP = null;
+var gAll = null;
+var gSel = 75;
+var gP = null;
 
-function getParams(){
-  const minE = parseInt(document.getElementById('n-min').value)||20;
-  const maxE = parseInt(document.getElementById('n-max').value)||30;
-  const obj = document.querySelector('input[name=obj]:checked').value;
-  const dropPct = parseFloat(document.getElementById('n-drop').value)||0;
-  const dTime = document.querySelector('input[name=dtime]:checked').value;
-  const internPct = parseInt(document.getElementById('sl-intern').value);
-  const intake = parseInt(document.getElementById('sl-intake').value);
-  return {minE, maxE, obj, dropPct, dTime, internPct, intake};
+function getParams() {
+  var minE = parseInt(document.getElementById('n-min').value, 10) || 20;
+  var maxE = parseInt(document.getElementById('n-max').value, 10) || 30;
+  var objEl = document.querySelector('input[name="obj"]:checked');
+  var obj = objEl ? objEl.value : 'max';
+  var dropPct = parseFloat(document.getElementById('n-drop').value) || 0;
+  var dtEl = document.querySelector('input[name="dtime"]:checked');
+  var dTime = dtEl ? dtEl.value : 'year';
+  var internPct = parseInt(document.getElementById('sl-intern').value, 10);
+  var intake = parseInt(document.getElementById('sl-intake').value, 10);
+  return {minE: minE, maxE: maxE, obj: obj, dropPct: dropPct, dTime: dTime, internPct: internPct, intake: intake};
 }
 
-function runSim(){
-  const p = getParams();
-  const errEl = document.getElementById('ctrl-err');
-  if(p.minE > p.maxE){
-    errEl.style.display='';
-    errEl.textContent='Error: min enrollment cannot exceed max enrollment.';
+function runSim() {
+  var p = getParams();
+  var errEl = document.getElementById('ctrl-err');
+  if (p.minE > p.maxE) {
+    errEl.style.display = '';
+    errEl.textContent = 'Error: min enrollment cannot exceed max enrollment.';
     return;
   }
-  errEl.style.display='none';
+  errEl.style.display = 'none';
   gSel = p.intake;
   gP = p;
   gAll = {};
-  for(let n=50; n<=100; n+=5) gAll[n] = simOne(n, p);
+  for (var n = 50; n <= 100; n += 5) {
+    gAll[n] = simOne(n, p);
+  }
+  renderLineChart();
   renderAnnual();
   renderBreakdown();
-  renderChart();
+  renderBarChart();
   runTests();
 }
 
-// ── Render: annual table ───────────────────────────────────────
-function renderAnnual(){
-  let h = `<table>
-    <thead><tr>
-      <th class="lft">Intake</th>
-      <th class="pfc">PF Autumn</th><th class="pfc">PF Spring</th>
-      <th class="pfc">PF Total</th><th class="pfc">PF ECTS</th>
-      <th class="sksc">SKS Autumn</th><th class="sksc">SKS Spring</th>
-      <th class="sksc">SKS Total</th><th class="sksc">SKS ECTS</th>
-      <th>Δ SKS−PF</th><th class="lft">Issues</th>
-    </tr></thead><tbody>`;
-
-  for(let n=50; n<=100; n+=5){
-    const r = gAll[n];
-    const pf=r.PF, sks=r.SKS;
-    const diff = sks.totalC - pf.totalC;
-    const sel = n===gSel;
-    const issues = [];
-    for(const [pk,pool] of Object.entries(pf.poolRes)) if(!pool.feasible) issues.push(`<span class="err-b" title="${esc(pool.note)}">PF ${pk}</span>`);
-    for(const [pk,pool] of Object.entries(sks.poolRes)) if(!pool.feasible) issues.push(`<span class="err-b" title="${esc(pool.note)}">SKS ${pk}</span>`);
-    h += `<tr class="${sel?'sel':''}" onclick="selIntake(${n})" style="cursor:pointer">
-      <td class="lft"><strong>${n}</strong></td>
-      <td>${pf.autC}</td><td>${pf.sprC}</td>
-      <td><strong>${pf.totalC}</strong></td><td>${pf.totalEcts}</td>
-      <td>${sks.autC}</td><td>${sks.sprC}</td>
-      <td><strong>${sks.totalC}</strong></td><td>${sks.totalEcts}</td>
-      <td><strong>${diff>=0?'+':''}${diff}</strong></td>
-      <td class="lft">${issues.length?issues.join(' '):'<span class="ok-b">OK</span>'}</td>
-    </tr>`;
+// ── Render: line chart ────────────────────────────────────────
+function renderLineChart() {
+  var intakes = [], pfV = [], pf5V = [], sksV = [];
+  for (var n = 50; n <= 100; n += 5) {
+    intakes.push(n);
+    pfV.push(gAll[n].PF.totalC);
+    pf5V.push(gAll[n].PF.total5);
+    sksV.push(gAll[n].SKS.totalC);
   }
-  h += `</tbody></table>`;
+  var W = 600, H = 160;
+  var ML = 44, MB = 30, MT = 18, MR = 20;
+  var PW = W - ML - MR, PH = H - MT - MB;
+  var allVals = pfV.concat(sksV);
+  var maxV = 0;
+  for (var i = 0; i < allVals.length; i++) if (allVals[i] > maxV) maxV = allVals[i];
+  if (maxV < 1) maxV = 1;
+  var nPts = intakes.length;
+
+  function px(i) { return ML + (i / (nPts - 1)) * PW; }
+  function py(v) { return MT + PH - (v / maxV) * PH; }
+  function makePath(vals) {
+    var d = '';
+    for (var j = 0; j < vals.length; j++) {
+      d += (j === 0 ? 'M' : 'L') + px(j).toFixed(1) + ',' + py(vals[j]).toFixed(1);
+    }
+    return d;
+  }
+
+  var PF_COL = '#2563eb', PF5_COL = '#93c5fd', SKS_COL = '#dc2626';
+
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" aria-label="Line chart of total offerings by intake">';
+
+  // Gridlines + Y ticks
+  for (var yi = 0; yi <= 4; yi++) {
+    var yv = Math.round(maxV * yi / 4);
+    var ypos = MT + PH - PH * yi / 4;
+    svg += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + ypos.toFixed(1) + '" y2="' + ypos.toFixed(1) + '" stroke="#e5e7eb" stroke-width="1"/>';
+    svg += '<text x="' + (ML - 5) + '" y="' + (ypos + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#9ca3af">' + yv + '</text>';
+  }
+
+  // Lines
+  svg += '<path d="' + makePath(sksV) + '" stroke="' + SKS_COL + '" stroke-width="2.5" fill="none"/>';
+  svg += '<path d="' + makePath(pfV) + '" stroke="' + PF_COL + '" stroke-width="2.5" fill="none"/>';
+  svg += '<path d="' + makePath(pf5V) + '" stroke="' + PF5_COL + '" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>';
+
+  // Dots + X labels
+  for (var di = 0; di < intakes.length; di++) {
+    var sel = intakes[di] === gSel;
+    var cx = px(di).toFixed(1);
+    var r1 = sel ? 5 : 3;
+    svg += '<circle cx="' + cx + '" cy="' + py(pfV[di]).toFixed(1) + '" r="' + r1 + '" fill="' + PF_COL + '">' +
+           '<title>PF intake ' + intakes[di] + ': ' + pfV[di] + '</title></circle>';
+    svg += '<circle cx="' + cx + '" cy="' + py(sksV[di]).toFixed(1) + '" r="' + r1 + '" fill="' + SKS_COL + '">' +
+           '<title>SKS intake ' + intakes[di] + ': ' + sksV[di] + '</title></circle>';
+    // X label for every other tick or selected
+    if (di % 2 === 0 || sel) {
+      svg += '<text x="' + cx + '" y="' + (H - MB + 14) + '" text-anchor="middle" font-size="10" fill="#9ca3af">' + intakes[di] + '</text>';
+    }
+    if (sel) {
+      svg += '<line x1="' + cx + '" x2="' + cx + '" y1="' + MT + '" y2="' + (MT + PH) + '" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,3"/>';
+    }
+  }
+
+  // Y-axis label
+  svg += '<text x="12" y="' + (MT + PH / 2) + '" text-anchor="middle" font-size="10" fill="#9ca3af" transform="rotate(-90,12,' + (MT + PH / 2) + ')">Offerings</text>';
+
+  // Axes
+  svg += '<line x1="' + ML + '" x2="' + ML + '" y1="' + MT + '" y2="' + (MT + PH) + '" stroke="#9ca3af" stroke-width="1.5"/>';
+  svg += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + (MT + PH) + '" y2="' + (MT + PH) + '" stroke="#9ca3af" stroke-width="1.5"/>';
+  svg += '</svg>';
+  document.getElementById('line-wrap').innerHTML = svg;
+}
+
+// ── Render: annual table ───────────────────────────────────────
+function renderAnnual() {
+  var h = '<table>' +
+    '<thead><tr>' +
+    '<th class="lft">Intake</th>' +
+    '<th class="pfc">PF 5-ECTS</th>' +
+    '<th class="pfc">PF 10-ECTS</th>' +
+    '<th class="pfc">PF Total</th>' +
+    '<th class="pfc">PF ECTS</th>' +
+    '<th class="sksc">SKS 10-ECTS</th>' +
+    '<th class="sksc">SKS Total</th>' +
+    '<th class="sksc">SKS ECTS</th>' +
+    '<th>Δ SKS−PF</th>' +
+    '<th class="lft">Issues</th>' +
+    '</tr></thead><tbody>';
+
+  for (var n = 50; n <= 100; n += 5) {
+    var r = gAll[n];
+    var pf = r.PF, sks = r.SKS;
+    var diff = sks.totalC - pf.totalC;
+    var sel = n === gSel;
+    var issues = [];
+    var pfKeys = Object.keys(pf.poolRes);
+    for (var pi = 0; pi < pfKeys.length; pi++) {
+      var pool = pf.poolRes[pfKeys[pi]];
+      if (!pool.feasible) issues.push('<span class="err-b" title="' + esc(pool.note) + '">PF ' + pfKeys[pi] + '</span>');
+    }
+    var sksKeys = Object.keys(sks.poolRes);
+    for (var si = 0; si < sksKeys.length; si++) {
+      var spool = sks.poolRes[sksKeys[si]];
+      if (!spool.feasible) issues.push('<span class="err-b" title="' + esc(spool.note) + '">SKS ' + sksKeys[si] + '</span>');
+    }
+    h += '<tr class="' + (sel ? 'sel' : '') + '" data-intake="' + n + '">' +
+      '<td class="lft"><strong>' + n + '</strong></td>' +
+      '<td>' + pf.total5 + '</td>' +
+      '<td>' + pf.total10 + '</td>' +
+      '<td><strong>' + pf.totalC + '</strong></td>' +
+      '<td>' + pf.totalEcts + '</td>' +
+      '<td>' + sks.total10 + '</td>' +
+      '<td><strong>' + sks.totalC + '</strong></td>' +
+      '<td>' + sks.totalEcts + '</td>' +
+      '<td><strong>' + (diff >= 0 ? '+' : '') + diff + '</strong></td>' +
+      '<td class="lft">' + (issues.length ? issues.join(' ') : '<span class="ok-b">OK</span>') + '</td>' +
+      '</tr>';
+  }
+  h += '</tbody></table>';
   document.getElementById('tbl-annual').innerHTML = h;
 }
 
-function selIntake(n){
+// Row click via event delegation
+document.getElementById('tbl-annual').addEventListener('click', function(e) {
+  var row = e.target;
+  while (row && row.tagName !== 'TR') row = row.parentElement;
+  if (row && row.dataset && row.dataset.intake) {
+    selIntake(parseInt(row.dataset.intake, 10));
+  }
+});
+
+function selIntake(n) {
   gSel = n;
   document.getElementById('sl-intake').value = n;
   document.getElementById('v-intake').textContent = n;
+  renderLineChart();
   renderAnnual();
   renderBreakdown();
-  renderChart();
+  renderBarChart();
 }
 
-// ── Render: semester breakdown + pools ────────────────────────
-function renderBreakdown(){
-  document.getElementById('breakdown-title').textContent = `Semester breakdown — intake ${gSel}`;
-  const r = gAll[gSel];
+// ── Render: semester breakdown ────────────────────────────────
+function renderBreakdown() {
+  document.getElementById('breakdown-title').textContent = 'Semester breakdown — intake ' + gSel;
+  var r = gAll[gSel];
 
-  // Semester detail panel
-  let semHtml = '';
-  for(const [key, prog] of [['PF',r.PF],['SKS',r.SKS]]){
-    const cls = key==='PF' ? 'pfc' : 'sksc';
-    semHtml += `<div>
-      <h3 class="${cls}">${PROG[key].label}</h3>
-      <div class="twrap"><table>
-        <thead><tr>
-          <th class="lft">Sem</th><th class="lft">Term</th>
-          <th>Enrolled</th><th>Active</th>
-          <th>Slots/student</th><th>Seat demand</th><th>ECTS type</th>
-        </tr></thead><tbody>`;
-    for(const d of prog.semRows){
-      const warn = d.sem===9 && gP.internPct>0 ? `<span class="warn-b" title="${esc(d.internNote)}">intern</span>` : '';
-      semHtml += `<tr>
-        <td class="lft">${d.sem}</td><td class="lft">${d.term}</td>
-        <td>${d.raw.toFixed(1)}</td>
-        <td>${d.active.toFixed(d.sem===9?0:1)} ${warn}</td>
-        <td>${d.slots}</td>
-        <td>${d.seats.toFixed(1)}</td>
-        <td>${d.ects}-ECTS</td>
-      </tr>`;
+  var semHtml = '';
+  var progKeys = ['PF', 'SKS'];
+  for (var ki = 0; ki < progKeys.length; ki++) {
+    var key = progKeys[ki];
+    var prog = r[key];
+    var cls = key === 'PF' ? 'pfc' : 'sksc';
+    semHtml += '<div><h3 class="' + cls + '">' + PROG[key].label + '</h3><div class="twrap"><table>' +
+      '<thead><tr>' +
+      '<th class="lft">Sem</th><th class="lft">Term</th><th class="lft">Course type</th>' +
+      '<th>Enrolled</th><th>Active</th><th>Slots/student</th><th>Seat demand</th><th>ECTS</th>' +
+      '</tr></thead><tbody>';
+    var rows = prog.semRows;
+    for (var ri = 0; ri < rows.length; ri++) {
+      var d = rows[ri];
+      var warn = (d.sem === 9 && gP.internPct > 0) ? ' <span class="warn-b" title="' + esc(d.internNote) + '">intern</span>' : '';
+      semHtml += '<tr><td class="lft">' + d.sem + '</td><td class="lft">' + d.term + '</td>' +
+        '<td class="lft">' + d.name + '</td>' +
+        '<td>' + d.raw.toFixed(1) + '</td>' +
+        '<td>' + (d.sem === 9 ? d.active.toFixed(0) : d.active.toFixed(1)) + warn + '</td>' +
+        '<td>' + d.slots + '</td>' +
+        '<td>' + d.seats.toFixed(1) + '</td>' +
+        '<td>' + d.ects + '</td></tr>';
     }
-    semHtml += `</tbody></table></div>`;
-    const d9 = prog.semRows.find(d=>d.sem===9);
-    if(d9 && gP.internPct>0) semHtml += `<p class="hint" style="margin-top:4px">${d9.internNote}</p>`;
-    semHtml += `</div>`;
+    semHtml += '</tbody></table></div>';
+    // Internship note for sem 9
+    var sem9rows = rows.filter(function(d) { return d.sem === 9; });
+    if (sem9rows.length > 0 && gP.internPct > 0) {
+      semHtml += '<p class="hint" style="margin-top:4px">' + esc(sem9rows[0].internNote) + '. Rounding: Math.round(cohort &times; (1&minus;internship%)).</p>';
+    }
+    semHtml += '</div>';
   }
   document.getElementById('sem-grid').innerHTML = semHtml;
 
   // Pools panel
-  let poolHtml = `<div class="bgrid">`;
-  for(const [key, prog] of [['PF',r.PF],['SKS',r.SKS]]){
-    const cls = key==='PF' ? 'pfc' : 'sksc';
-    poolHtml += `<div>
-      <h3 class="${cls}">${PROG[key].label} — calendar pools</h3>
-      <div class="twrap"><table>
-        <thead><tr>
-          <th class="lft">Term</th><th>ECTS</th><th class="lft">Sems pooled</th>
-          <th>Total seats</th><th>Max slots/student</th><th>Offerings</th><th class="lft">Status</th>
-        </tr></thead><tbody>`;
-    for(const [pk, pool] of Object.entries(prog.poolRes)){
-      poolHtml += `<tr class="${!pool.feasible?'infeas':''}">
-        <td class="lft">${pool.term}</td>
-        <td>${pool.ects}-ECTS</td>
-        <td class="lft">${pool.sems.join(', ')}</td>
-        <td>${pool.seats.toFixed(1)}</td>
-        <td>${pool.maxK}</td>
-        <td><strong>${pool.c}</strong></td>
-        <td class="lft">${pool.feasible ? '<span class="ok-b">OK</span>' : `<span class="err-b">Infeasible</span>`}</td>
-      </tr>`;
-      if(!pool.feasible) poolHtml += `<tr><td colspan="7" style="font-size:.74rem;color:var(--err);padding:2px 10px 7px;text-align:left">${esc(pool.note)}</td></tr>`;
+  var poolHtml = '<div class="bgrid">';
+  for (var ki2 = 0; ki2 < progKeys.length; ki2++) {
+    var k2 = progKeys[ki2];
+    var pd = r[k2];
+    var cls2 = k2 === 'PF' ? 'pfc' : 'sksc';
+    poolHtml += '<div><h3 class="' + cls2 + '">' + PROG[k2].label + ' — calendar pools</h3><div class="twrap"><table>' +
+      '<thead><tr>' +
+      '<th class="lft">Term</th><th>ECTS</th><th class="lft">Sems pooled</th>' +
+      '<th>Total seats</th><th>Max slots/student</th><th>Offerings</th><th class="lft">Status</th>' +
+      '</tr></thead><tbody>';
+    var ppks = Object.keys(pd.poolRes);
+    for (var ppi = 0; ppi < ppks.length; ppi++) {
+      var ppk = ppks[ppi];
+      var pool2 = pd.poolRes[ppk];
+      poolHtml += '<tr class="' + (!pool2.feasible ? 'infeas' : '') + '">' +
+        '<td class="lft">' + pool2.term + '</td>' +
+        '<td>' + pool2.ects + '-ECTS</td>' +
+        '<td class="lft">' + pool2.sems.join(', ') + '</td>' +
+        '<td>' + pool2.seats.toFixed(1) + '</td>' +
+        '<td>' + pool2.maxK + '</td>' +
+        '<td><strong>' + pool2.c + '</strong></td>' +
+        '<td class="lft">' + (pool2.feasible ? '<span class="ok-b">OK</span>' : '<span class="err-b">Infeasible</span>') + '</td></tr>';
+      if (!pool2.feasible) {
+        poolHtml += '<tr><td colspan="7" style="font-size:.74rem;color:var(--err);padding:2px 10px 7px;text-align:left">' + esc(pool2.note) + '</td></tr>';
+      }
     }
-    poolHtml += `</tbody></table></div></div>`;
+    poolHtml += '</tbody></table></div></div>';
   }
-  poolHtml += `</div>`;
-  poolHtml += `<div class="note">
-    <strong>Why semester demand ≠ calendar provision:</strong> Multiple study semesters that fall in the same calendar term (e.g. PF sems 7 and 9 both in Autumn) are pooled. The number of sections is determined for the combined seat demand, not per study semester. For SKS, three study semesters (5, 7, 9) all contribute autumn 10-ECTS demand; a year-5 student needing 3 electives in autumn also sets the minimum section count (timetable constraint ≥ max slots/student).
-  </div>`;
+  poolHtml += '</div><div class="note">' +
+    '<strong>Why semester demand &ne; calendar provision:</strong> Multiple study semesters that fall in the same calendar term ' +
+    'are pooled. For PF, autumn 5-ECTS demand comes from sem 3 (Valgkursus, year 2), sem 7 (2&times; Videregående metode, year 4) and ' +
+    'sem 9 (Videregående metode, year 5) — all 5-ECTS courses in autumn are assumed interchangeable per the simulation spec. ' +
+    'The timetable constraint (max slots/student) ensures enough distinct offerings so that students needing multiple electives in one term can each take different courses.' +
+    '</div>';
   document.getElementById('pools-content').innerHTML = poolHtml;
 }
 
-function showTab(t){
-  ['sem','pools'].forEach(x=>{
-    document.getElementById('panel-'+x).style.display = x===t ? '' : 'none';
-    document.getElementById('tab-'+x).classList.toggle('on', x===t);
-  });
+// Tab switching
+document.getElementById('tab-sem').addEventListener('click', function() { showTab('sem'); });
+document.getElementById('tab-pools').addEventListener('click', function() { showTab('pools'); });
+
+function showTab(t) {
+  document.getElementById('panel-sem').style.display = t === 'sem' ? '' : 'none';
+  document.getElementById('panel-pools').style.display = t === 'pools' ? '' : 'none';
+  document.getElementById('tab-sem').classList.toggle('on', t === 'sem');
+  document.getElementById('tab-pools').classList.toggle('on', t === 'pools');
 }
 
-// ── Render: SVG chart ──────────────────────────────────────────
-function renderChart(){
-  document.getElementById('chart-title').textContent = `Offerings by calendar pool — intake ${gSel}`;
-  const r = gAll[gSel];
+// ── Render: bar chart (by pool) ────────────────────────────────
+function renderBarChart() {
+  document.getElementById('chart-title').textContent = 'Offerings by calendar pool — intake ' + gSel;
+  var r = gAll[gSel];
 
-  // Collect all pool keys from both programmes
-  const allKeys = new Set();
-  for(const [,pool] of Object.entries(r.PF.poolRes)) allKeys.add(`${pool.term} ${pool.ects}-ECTS`);
-  for(const [,pool] of Object.entries(r.SKS.poolRes)) allKeys.add(`${pool.term} ${pool.ects}-ECTS`);
-  const labels = [...allKeys].sort();
+  // Collect all pool keys
+  var labelSet = {};
+  var poolKeys = Object.keys(r.PF.poolRes);
+  for (var i = 0; i < poolKeys.length; i++) {
+    var pl = r.PF.poolRes[poolKeys[i]];
+    labelSet[pl.term + ' ' + pl.ects + '-ECTS'] = 1;
+  }
+  var sksPoolKeys = Object.keys(r.SKS.poolRes);
+  for (var j = 0; j < sksPoolKeys.length; j++) {
+    var spl = r.SKS.poolRes[sksPoolKeys[j]];
+    labelSet[spl.term + ' ' + spl.ects + '-ECTS'] = 1;
+  }
+  var labels = Object.keys(labelSet).sort();
 
-  function getVal(prog, lbl){
-    for(const [,pool] of Object.entries(prog.poolRes)){
-      if(`${pool.term} ${pool.ects}-ECTS`===lbl) return pool.c;
+  function getVal(prog, lbl) {
+    var ppks = Object.keys(prog.poolRes);
+    for (var i = 0; i < ppks.length; i++) {
+      var pool = prog.poolRes[ppks[i]];
+      if (pool.term + ' ' + pool.ects + '-ECTS' === lbl) return pool.c;
     }
     return 0;
   }
 
-  const pfV = labels.map(l=>getVal(r.PF,l));
-  const sksV = labels.map(l=>getVal(r.SKS,l));
-  const maxV = Math.max(...pfV,...sksV,1);
-
-  const nGroups = labels.length;
-  const W = Math.max(480, nGroups*110);
-  const H = 240;
-  const ML=44,MB=58,MT=22,MR=18;
-  const PW=W-ML-MR, PH=H-MT-MB;
-  const gW = PW/nGroups;
-  const bW = Math.min(30, (gW-14)/2);
-  const PF_COL='#2563eb', SKS_COL='#dc2626';
-
-  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-label="Grouped bar chart: offerings by calendar pool">`;
-
-  // Gridlines + Y ticks
-  for(let i=0;i<=5;i++){
-    const v = +(maxV*i/5).toFixed(0);
-    const y = MT + PH - PH*i/5;
-    svg += `<line x1="${ML}" x2="${W-MR}" y1="${y}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
-    svg += `<text x="${ML-5}" y="${y+4}" text-anchor="end" font-size="11" fill="#9ca3af">${v}</text>`;
+  var pfV = [], sksV = [];
+  for (var li = 0; li < labels.length; li++) {
+    pfV.push(getVal(r.PF, labels[li]));
+    sksV.push(getVal(r.SKS, labels[li]));
   }
+  var allVals2 = pfV.concat(sksV);
+  var maxV2 = 0;
+  for (var vi = 0; vi < allVals2.length; vi++) if (allVals2[vi] > maxV2) maxV2 = allVals2[vi];
+  if (maxV2 < 1) maxV2 = 1;
 
-  // Y-axis label
-  svg += `<text x="12" y="${MT+PH/2}" text-anchor="middle" font-size="11" fill="#9ca3af" transform="rotate(-90,12,${MT+PH/2})">Offerings</text>`;
+  var W = Math.max(500, labels.length * 110);
+  var H = 240;
+  var ML = 44, MB = 58, MT = 22, MR = 18;
+  var PW = W - ML - MR, PH = H - MT - MB;
+  var gW = PW / labels.length;
+  var bW = Math.min(30, (gW - 14) / 2);
+  var PF_COL = '#2563eb', SKS_COL = '#dc2626';
 
-  // Bars
-  labels.forEach((lbl,i)=>{
-    const cx = ML + i*gW + gW/2;
-    const pX=cx-bW-2, sX=cx+2;
-    const pH=pfV[i]/maxV*PH, sH=sksV[i]/maxV*PH;
-    const pY=MT+PH-pH, sY=MT+PH-sH;
+  var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
 
-    if(pfV[i]>0){
-      svg += `<rect x="${pX}" y="${pY}" width="${bW}" height="${pH}" fill="${PF_COL}" rx="2"><title>PF — ${lbl}: ${pfV[i]}</title></rect>`;
-      svg += `<text x="${pX+bW/2}" y="${pY-3}" text-anchor="middle" font-size="10" fill="${PF_COL}">${pfV[i]}</text>`;
+  for (var yi2 = 0; yi2 <= 5; yi2++) {
+    var yv2 = Math.round(maxV2 * yi2 / 5);
+    var yp2 = MT + PH - PH * yi2 / 5;
+    svg += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + yp2.toFixed(1) + '" y2="' + yp2.toFixed(1) + '" stroke="#e5e7eb" stroke-width="1"/>';
+    svg += '<text x="' + (ML - 5) + '" y="' + (yp2 + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#9ca3af">' + yv2 + '</text>';
+  }
+  svg += '<text x="12" y="' + (MT + PH / 2) + '" text-anchor="middle" font-size="11" fill="#9ca3af" transform="rotate(-90,12,' + (MT + PH / 2) + ')">Offerings</text>';
+
+  for (var bi = 0; bi < labels.length; bi++) {
+    var cx = ML + bi * gW + gW / 2;
+    var pX = cx - bW - 2, sX = cx + 2;
+    var pH2 = pfV[bi] / maxV2 * PH, sH2 = sksV[bi] / maxV2 * PH;
+    var pY2 = MT + PH - pH2, sY2 = MT + PH - sH2;
+    if (pfV[bi] > 0) {
+      svg += '<rect x="' + pX.toFixed(1) + '" y="' + pY2.toFixed(1) + '" width="' + bW.toFixed(1) + '" height="' + pH2.toFixed(1) + '" fill="' + PF_COL + '" rx="2"><title>PF ' + labels[bi] + ': ' + pfV[bi] + '</title></rect>';
+      svg += '<text x="' + (pX + bW / 2).toFixed(1) + '" y="' + (pY2 - 3).toFixed(1) + '" text-anchor="middle" font-size="10" fill="' + PF_COL + '">' + pfV[bi] + '</text>';
     }
-    if(sksV[i]>0){
-      svg += `<rect x="${sX}" y="${sY}" width="${bW}" height="${sH}" fill="${SKS_COL}" rx="2"><title>SKS — ${lbl}: ${sksV[i]}</title></rect>`;
-      svg += `<text x="${sX+bW/2}" y="${sY-3}" text-anchor="middle" font-size="10" fill="${SKS_COL}">${sksV[i]}</text>`;
+    if (sksV[bi] > 0) {
+      svg += '<rect x="' + sX.toFixed(1) + '" y="' + sY2.toFixed(1) + '" width="' + bW.toFixed(1) + '" height="' + sH2.toFixed(1) + '" fill="' + SKS_COL + '" rx="2"><title>SKS ' + labels[bi] + ': ' + sksV[bi] + '</title></rect>';
+      svg += '<text x="' + (sX + bW / 2).toFixed(1) + '" y="' + (sY2 - 3).toFixed(1) + '" text-anchor="middle" font-size="10" fill="' + SKS_COL + '">' + sksV[bi] + '</text>';
     }
-
-    const short = lbl.replace('Autumn','Aut').replace('Spring','Spr');
-    svg += `<text x="${cx}" y="${H-MB+16}" text-anchor="middle" font-size="11" fill="#6b7280">${short}</text>`;
-    svg += `<line x1="${cx}" x2="${cx}" y1="${MT+PH}" y2="${MT+PH+4}" stroke="#9ca3af" stroke-width="1"/>`;
-  });
-
-  // Axes
-  svg += `<line x1="${ML}" x2="${ML}" y1="${MT}" y2="${MT+PH}" stroke="#9ca3af" stroke-width="1.5"/>`;
-  svg += `<line x1="${ML}" x2="${W-MR}" y1="${MT+PH}" y2="${MT+PH}" stroke="#9ca3af" stroke-width="1.5"/>`;
-  svg += `</svg>`;
-  document.getElementById('chart-wrap').innerHTML = svg;
+    var short = labels[bi].replace('Autumn', 'Aut').replace('Spring', 'Spr');
+    svg += '<text x="' + cx.toFixed(1) + '" y="' + (H - MB + 16) + '" text-anchor="middle" font-size="11" fill="#6b7280">' + short + '</text>';
+    svg += '<line x1="' + cx.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y1="' + (MT + PH) + '" y2="' + (MT + PH + 4) + '" stroke="#9ca3af" stroke-width="1"/>';
+  }
+  svg += '<line x1="' + ML + '" x2="' + ML + '" y1="' + MT + '" y2="' + (MT + PH) + '" stroke="#9ca3af" stroke-width="1.5"/>';
+  svg += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + (MT + PH) + '" y2="' + (MT + PH) + '" stroke="#9ca3af" stroke-width="1.5"/>';
+  svg += '</svg>';
+  document.getElementById('bar-wrap').innerHTML = svg;
 }
 
 // ── CSV export ─────────────────────────────────────────────────
-function doExport(type){
-  if(!gAll) return;
-  let csv='';
-  if(type==='annual'){
-    csv='Intake,PF Autumn,PF Spring,PF Total,PF ECTS,SKS Autumn,SKS Spring,SKS Total,SKS ECTS,Diff (SKS-PF),PF Issues,SKS Issues\n';
-    for(let n=50;n<=100;n+=5){
-      const r=gAll[n];
-      const pfIss=Object.values(r.PF.poolRes).filter(p=>!p.feasible).map(p=>p.note).join('; ');
-      const sksIss=Object.values(r.SKS.poolRes).filter(p=>!p.feasible).map(p=>p.note).join('; ');
-      csv+=`${n},${r.PF.autC},${r.PF.sprC},${r.PF.totalC},${r.PF.totalEcts},${r.SKS.autC},${r.SKS.sprC},${r.SKS.totalC},${r.SKS.totalEcts},${r.SKS.totalC-r.PF.totalC},"${pfIss}","${sksIss}"\n`;
+function doExport(type) {
+  if (!gAll) return;
+  var csv = '';
+  if (type === 'annual') {
+    csv = 'Intake,PF 5-ECTS,PF 10-ECTS,PF Total,PF ECTS,SKS 10-ECTS,SKS Total,SKS ECTS,Diff (SKS-PF),PF Issues,SKS Issues\n';
+    for (var n = 50; n <= 100; n += 5) {
+      var r = gAll[n];
+      var pfIss = [], sksIss = [];
+      var pfpks = Object.keys(r.PF.poolRes);
+      for (var pi = 0; pi < pfpks.length; pi++) {
+        var pp = r.PF.poolRes[pfpks[pi]];
+        if (!pp.feasible) pfIss.push(pp.note);
+      }
+      var skspks = Object.keys(r.SKS.poolRes);
+      for (var si = 0; si < skspks.length; si++) {
+        var sp = r.SKS.poolRes[skspks[si]];
+        if (!sp.feasible) sksIss.push(sp.note);
+      }
+      csv += n + ',' + r.PF.total5 + ',' + r.PF.total10 + ',' + r.PF.totalC + ',' + r.PF.totalEcts + ',' +
+             r.SKS.total10 + ',' + r.SKS.totalC + ',' + r.SKS.totalEcts + ',' +
+             (r.SKS.totalC - r.PF.totalC) + ',"' + pfIss.join('; ') + '","' + sksIss.join('; ') + '"\n';
     }
   } else {
-    const r=gAll[gSel];
-    csv='Programme,Sem,Acad Year,Term,Enrolled,Active,Slots/student,Seat demand,ECTS\n';
-    for(const [k,prog] of [['PF',r.PF],['SKS',r.SKS]]){
-      for(const d of prog.semRows) csv+=`${k},${d.sem},${d.yr},${d.term},${d.raw.toFixed(2)},${d.active.toFixed(2)},${d.slots},${d.seats.toFixed(2)},${d.ects}\n`;
+    var r2 = gAll[gSel];
+    csv = 'Programme,Sem,Acad Year,Term,Course type,Enrolled,Active,Slots/student,Seat demand,ECTS\n';
+    var pks = ['PF', 'SKS'];
+    for (var ki = 0; ki < pks.length; ki++) {
+      var pd = r2[pks[ki]];
+      for (var ri = 0; ri < pd.semRows.length; ri++) {
+        var d = pd.semRows[ri];
+        csv += pks[ki] + ',' + d.sem + ',' + d.yr + ',' + d.term + ',' + d.name + ',' +
+               d.raw.toFixed(2) + ',' + d.active.toFixed(2) + ',' + d.slots + ',' + d.seats.toFixed(2) + ',' + d.ects + '\n';
+      }
     }
-    csv+='\nProgramme,Pool,Sems pooled,Total seats,Max slots,Offerings,Feasible,Note\n';
-    for(const [k,prog] of [['PF',r.PF],['SKS',r.SKS]]){
-      for(const [pk,pool] of Object.entries(prog.poolRes)){
-        csv+=`${k},${pk},"${pool.sems.join(';')}",${pool.seats.toFixed(2)},${pool.maxK},${pool.c},${pool.feasible?'OK':'INFEASIBLE'},"${pool.note}"\n`;
+    csv += '\nProgramme,Pool,Sems pooled,Total seats,Max slots,Offerings,Feasible,Note\n';
+    for (var ki2 = 0; ki2 < pks.length; ki2++) {
+      var pd2 = r2[pks[ki2]];
+      var ppks2 = Object.keys(pd2.poolRes);
+      for (var ppi = 0; ppi < ppks2.length; ppi++) {
+        var pool3 = pd2.poolRes[ppks2[ppi]];
+        csv += pks[ki2] + ',' + ppks2[ppi] + ',"' + pool3.sems.join(';') + '",' +
+               pool3.seats.toFixed(2) + ',' + pool3.maxK + ',' + pool3.c + ',' +
+               (pool3.feasible ? 'OK' : 'INFEASIBLE') + ',"' + pool3.note + '"\n';
       }
     }
   }
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`elective-sim-${type}-${Date.now()}.csv`;
+  var blob = new Blob([csv], {type: 'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'elective-sim-' + type + '-' + Date.now() + '.csv';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── Automated tests ────────────────────────────────────────────
-function runTests(){
-  const def = {minE:20, maxE:30, obj:'max', dropPct:0, dTime:'year', internPct:25};
-  const tests = [];
+function runTests() {
+  var def = {minE:20, maxE:30, obj:'max', dropPct:0, dTime:'year', internPct:25};
+  var tests = [];
 
-  function chk(label, got, exp, tol){
-    const pass = tol!=null ? Math.abs(got-exp)<=tol : got===exp;
-    tests.push({label, pass, got, exp});
+  function chk(label, got, exp, tol) {
+    var pass = tol != null ? Math.abs(got - exp) <= tol : got === exp;
+    tests.push({label: label, pass: pass, got: got, exp: exp});
   }
 
-  // 1. Internship rounding: round(75*0.75) = round(56.25) = 56
-  chk('Sem9 active students (intake=75, intern=25%)', Math.round(75*(1-0.25)), 56);
+  // 1. Internship rounding
+  chk('Sem9 active students (intake=75, intern=25%)', Math.round(75 * (1 - 0.25)), 56);
 
-  // 2. PF Autumn-10 seats: sem7=75*1=75, sem9=56*1=56 → 131
-  const r75 = simOne(75, def);
-  const pfA10 = r75.PF.poolRes['Autumn-10'];
-  chk('PF Autumn-10 total seats (intake=75, intern=25%)', pfA10 ? Math.round(pfA10.seats) : -1, 131);
+  var r75 = simOne(75, def);
 
-  // 3. PF Autumn-10 offerings (maximize): cMax=floor(131/20)=6
+  // 2–3. PF Autumn-10: sem7=75, sem9=56 → S=131; maximize → floor(131/20)=6
+  var pfA10 = r75.PF.poolRes['Autumn-10'];
+  chk('PF Autumn-10 seats (intake=75, intern=25%)', pfA10 ? Math.round(pfA10.seats) : -1, 131);
   chk('PF Autumn-10 offerings maximize', pfA10 ? pfA10.c : -1, 6);
 
-  // 4. PF Autumn-10 offerings (minimize): cMin=max(ceil(131/30),1)=5
-  const r75min = simOne(75, {...def, obj:'min'});
-  const pfA10m = r75min.PF.poolRes['Autumn-10'];
+  // 4. PF Autumn-10 minimize: max(ceil(131/30),1)=5
+  var r75m = simOne(75, {minE:20, maxE:30, obj:'min', dropPct:0, dTime:'year', internPct:25});
+  var pfA10m = r75m.PF.poolRes['Autumn-10'];
   chk('PF Autumn-10 offerings minimize', pfA10m ? pfA10m.c : -1, 5);
 
-  // 5. SKS Autumn-10 seats: sem5=75, sem7=150, sem9=56*3=168 → 393
-  const sksA10 = r75.SKS.poolRes['Autumn-10'];
-  chk('SKS Autumn-10 total seats (intake=75, intern=25%)', sksA10 ? Math.round(sksA10.seats) : -1, 393);
+  // 5–6. PF Autumn-5: sem3=75*1 + sem7=75*2 + sem9=56*1 = 75+150+56 = 281; maxK=2
+  //   maximize: floor(281/20)=14
+  var pfA5 = r75.PF.poolRes['Autumn-5'];
+  chk('PF Autumn-5 seats (intake=75, intern=25%)', pfA5 ? Math.round(pfA5.seats) : -1, 281);
+  chk('PF Autumn-5 offerings maximize', pfA5 ? pfA5.c : -1, 14);
 
-  // 6. SKS Autumn-10 offerings (max): cMax=floor(393/20)=19
+  // 7. PF Autumn-5 minimize: max(ceil(281/30),2)=max(10,2)=10
+  var pfA5m = r75m.PF.poolRes['Autumn-5'];
+  chk('PF Autumn-5 offerings minimize', pfA5m ? pfA5m.c : -1, 10);
+
+  // 8. PF Spring-5: sem6=75 + sem8=75 = 150; floor(150/20)=7
+  var pfS5 = r75.PF.poolRes['Spring-5'];
+  chk('PF Spring-5 seats', pfS5 ? pfS5.seats : -1, 150);
+  chk('PF Spring-5 offerings maximize', pfS5 ? pfS5.c : -1, 7);
+
+  // 9. PF Spring-10: sem8=75; floor(75/20)=3
+  var pfS10 = r75.PF.poolRes['Spring-10'];
+  chk('PF Spring-10 offerings', pfS10 ? pfS10.c : -1, 3);
+
+  // 10–11. SKS Autumn-10: sem5=75 + sem7=150 + sem9=56*3=168 → 393; max → floor(393/20)=19
+  var sksA10 = r75.SKS.poolRes['Autumn-10'];
+  chk('SKS Autumn-10 seats (intake=75, intern=25%)', sksA10 ? Math.round(sksA10.seats) : -1, 393);
   chk('SKS Autumn-10 offerings maximize', sksA10 ? sksA10.c : -1, 19);
 
-  // 7. SKS Autumn-10 minimize: cMin=max(ceil(393/30),3)=max(14,3)=14
-  const r75mSKS = simOne(75, {...def, obj:'min'});
-  chk('SKS Autumn-10 offerings minimize', r75mSKS.SKS.poolRes['Autumn-10']?.c ?? -1, 14);
+  // 12. SKS Autumn-10 minimize: max(ceil(393/30),3)=max(14,3)=14
+  var sksA10m = r75m.SKS.poolRes['Autumn-10'];
+  chk('SKS Autumn-10 offerings minimize', sksA10m ? sksA10m.c : -1, 14);
 
-  // 8. SKS Spring-10 seats: sem8=75*3=225; maximize: floor(225/20)=11
-  const sksS10 = r75.SKS.poolRes['Spring-10'];
-  chk('SKS Spring-10 seats (intake=75)', sksS10 ? sksS10.seats : -1, 225);
+  // 13–14. SKS Spring-10: sem8=75*3=225; maximize → floor(225/20)=11
+  var sksS10 = r75.SKS.poolRes['Spring-10'];
+  chk('SKS Spring-10 seats', sksS10 ? sksS10.seats : -1, 225);
   chk('SKS Spring-10 offerings maximize', sksS10 ? sksS10.c : -1, 11);
 
-  // 9. PF Spring-10 seats: sem8=75*1=75; floor(75/20)=3
-  const pfS10 = r75.PF.poolRes['Spring-10'];
-  chk('PF Spring-10 offerings (intake=75)', pfS10 ? pfS10.c : -1, 3);
+  // 15. Infeasible: S=35, [20,30] → cMin=2 > cMax=1
+  var inf = offeringsForPool(35, 1, 20, 30, 'max');
+  chk('Infeasible (S=35, [20,30])', inf.feasible, false);
 
-  // 10. PF autumn/spring 5-ECTS: each 75 seats, floor(75/20)=3
-  const pfA5 = r75.PF.poolRes['Autumn-5'];
-  const pfS5 = r75.PF.poolRes['Spring-5'];
-  chk('PF Autumn-5 offerings (intake=75)', pfA5 ? pfA5.c : -1, 3);
-  chk('PF Spring-5 offerings (intake=75)', pfS5 ? pfS5.c : -1, 3);
+  // 16–17. Feasibility boundary: S=40 → cMin=2, cMax=2 → feasible, c=2
+  var f40 = offeringsForPool(40, 1, 20, 30, 'max');
+  chk('Feasible (S=40, [20,30])', f40.feasible, true);
+  chk('Offerings S=40 maximize', f40.c, 2);
 
-  // 11. Infeasible: S=35, [20,30] → cMin=ceil(35/30)=2, cMax=floor(35/20)=1 → infeasible
-  const infeas = offeringsForPool(35, 1, 20, 30, 'max');
-  chk('Infeasible partition (S=35, [20,30])', infeas.feasible, false);
+  // 18. Timetable infeasible: S=30, maxK=3 → cMin=max(1,3)=3, cMax=1 → infeasible
+  var tmInf = offeringsForPool(30, 3, 20, 30, 'max');
+  chk('Timetable infeasible (S=30, maxK=3)', tmInf.feasible, false);
 
-  // 12. Feasibility gap boundary: S=40 → cMin=2, cMax=2 → feasible
-  const feas40 = offeringsForPool(40, 1, 20, 30, 'max');
-  chk('Feasible (S=40, [20,30])', feas40.feasible, true);
-  chk('Offerings S=40 maximize', feas40.c, 2);
+  // 19. 100% internship: sem9 seat demand=0
+  var r100i = simOne(75, {minE:20, maxE:30, obj:'max', dropPct:0, dTime:'year', internPct:100});
+  var sem9pf = null;
+  for (var ri = 0; ri < r100i.PF.semRows.length; ri++) {
+    if (r100i.PF.semRows[ri].sem === 9 && r100i.PF.semRows[ri].ects === 10) { sem9pf = r100i.PF.semRows[ri]; break; }
+  }
+  chk('Sem9 10-ECTS seat demand with 100% internship', sem9pf ? sem9pf.seats : -1, 0);
 
-  // 13. Timetable constraint makes it infeasible: S=30, maxK=3, [20,30]
-  //     cMin=max(ceil(30/30),3)=max(1,3)=3; cMax=floor(30/20)=1 → infeasible
-  const timetable = offeringsForPool(30, 3, 20, 30, 'max');
-  chk('Timetable infeasible (S=30, maxK=3, [20,30])', timetable.feasible, false);
+  // 20. Dropout: year5 cohort = intake*(1-0.2)^4 at 20% annual dropout
+  var rDrop = simOne(100, {minE:20, maxE:30, obj:'max', dropPct:20, dTime:'year', internPct:0});
+  var sem9d = null;
+  for (var ri2 = 0; ri2 < rDrop.PF.semRows.length; ri2++) {
+    if (rDrop.PF.semRows[ri2].sem === 9 && rDrop.PF.semRows[ri2].ects === 10) { sem9d = rDrop.PF.semRows[ri2]; break; }
+  }
+  var expected20 = 100 * Math.pow(0.8, 4);
+  chk('Year5 cohort with 20% annual dropout (intake=100)', sem9d ? sem9d.raw : -1, expected20, 0.01);
 
-  // 14. 0% internship: sem9 active = 75
-  const r75_0i = simOne(75, {...def, internPct:0});
-  const pf9 = r75_0i.PF.semRows.find(d=>d.sem===9);
-  chk('Sem9 active students with 0% internship', pf9 ? pf9.active : -1, 75);
-
-  // 15. 100% internship: sem9 seat demand = 0
-  const r75_100i = simOne(75, {...def, internPct:100});
-  const pf9full = r75_100i.PF.semRows.find(d=>d.sem===9);
-  chk('Sem9 seat demand with 100% internship', pf9full ? pf9full.seats : -1, 0);
-
-  // 16. Dropout: intake=100, 20% annual dropout → year 5 cohort = 100*(0.8)^4 = 40.96
-  const rDrop = simOne(100, {...def, dropPct:20, internPct:0});
-  const pf9drop = rDrop.PF.semRows.find(d=>d.sem===9);
-  chk('Year5 cohort with 20% annual dropout (intake=100)', pf9drop ? pf9drop.raw : -1, 100*Math.pow(0.8,4), 0.01);
-
-  const passed = tests.filter(t=>t.pass).length;
-  document.getElementById('test-out').innerHTML =
-    `<p style="font-weight:600;margin-bottom:8px">${passed}/${tests.length} tests passed</p>` +
-    tests.map(t=>`<div class="trow ${t.pass?'t-pass':'t-fail'}">${t.pass?'✓':'✗'} ${t.label} — got ${typeof t.got==='number'?t.got.toFixed?.(4):t.got}, expected ${t.exp}</div>`).join('');
+  var passed = 0;
+  for (var ti = 0; ti < tests.length; ti++) if (tests[ti].pass) passed++;
+  var html = '<p style="font-weight:600;margin-bottom:8px">' + passed + '/' + tests.length + ' tests passed</p>';
+  for (var ti2 = 0; ti2 < tests.length; ti2++) {
+    var t = tests[ti2];
+    var gotStr = typeof t.got === 'number' ? t.got.toFixed(4) : String(t.got);
+    html += '<div class="trow ' + (t.pass ? 't-pass' : 't-fail') + '">' +
+      (t.pass ? '✓' : '✗') + ' ' + t.label +
+      ' — got ' + gotStr + ', expected ' + t.exp + '</div>';
+  }
+  document.getElementById('test-out').innerHTML = html;
 }
 
 // ── Helpers ────────────────────────────────────────────────────
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 // ── Slider sync ────────────────────────────────────────────────
-document.getElementById('sl-intake').addEventListener('input', function(){ document.getElementById('v-intake').textContent=this.value; });
-document.getElementById('sl-intern').addEventListener('input', function(){ document.getElementById('v-intern').textContent=this.value; });
+document.getElementById('sl-intake').addEventListener('input', function() {
+  document.getElementById('v-intake').textContent = this.value;
+});
+document.getElementById('sl-intern').addEventListener('input', function() {
+  document.getElementById('v-intern').textContent = this.value;
+});
+
+// ── Button wiring ──────────────────────────────────────────────
+document.getElementById('run-btn').addEventListener('click', runSim);
+document.getElementById('exp-annual').addEventListener('click', function() { doExport('annual'); });
+document.getElementById('exp-detail').addEventListener('click', function() { doExport('detail'); });
 
 // ── Initial run ────────────────────────────────────────────────
 runSim();
+
+})(); // end IIFE
 </script>
 </body>
 </html>
