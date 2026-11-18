@@ -65,6 +65,15 @@ input[type=number]:focus{outline:2px solid var(--pf);border-color:transparent}
 .run-btn:hover{opacity:.9}
 .run-btn:focus{outline:3px solid var(--pf);outline-offset:2px}
 
+/* SKS config grid */
+.sks-cfg{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.sks-cfg h3{font-size:.85rem;font-weight:600;margin-bottom:8px}
+.sem-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.sem-cell{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px}
+.sem-lbl{font-size:.68rem;text-align:center;color:var(--muted);line-height:1.2}
+.sem-inp{width:44px;text-align:center;padding:4px 2px;font-size:.85rem;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)}
+.sem-inp:focus{outline:2px solid var(--sks);border-color:transparent}
+
 /* Line chart inside params card */
 .line-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
 .line-section h3{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:8px}
@@ -168,6 +177,22 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0}
         <label><input type="radio" name="dtime" value="sem"> Per semester</label>
       </div>
     </div>
+  </div>
+  <div class="sks-cfg">
+    <h3>SKS elective structure — 10-ECTS slots required per student per semester</h3>
+    <div class="sem-grid">
+      <div class="sem-cell"><span class="sem-lbl">Sem 1<br>Aut</span><input type="number" id="sks-s1" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 1 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 2<br>Spr</span><input type="number" id="sks-s2" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 2 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 3<br>Aut</span><input type="number" id="sks-s3" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 3 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 4<br>Spr</span><input type="number" id="sks-s4" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 4 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 5<br>Aut</span><input type="number" id="sks-s5" class="sem-inp" min="0" max="9" value="1" aria-label="Sem 5 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 6<br>Spr</span><input type="number" id="sks-s6" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 6 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 7<br>Aut</span><input type="number" id="sks-s7" class="sem-inp" min="0" max="9" value="2" aria-label="Sem 7 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 8<br>Spr</span><input type="number" id="sks-s8" class="sem-inp" min="0" max="9" value="3" aria-label="Sem 8 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 9<br>Aut</span><input type="number" id="sks-s9" class="sem-inp" min="0" max="9" value="3" aria-label="Sem 9 slots"></div>
+      <div class="sem-cell"><span class="sem-lbl">Sem 10<br>Spr</span><input type="number" id="sks-s10" class="sem-inp" min="0" max="9" value="0" aria-label="Sem 10 slots"></div>
+    </div>
+    <span class="hint">0 = no elective that semester. Odd = Autumn, even = Spring. Sem 9 internship share (above) also applies here.</span>
   </div>
   <div id="ctrl-err" style="color:var(--err);font-size:.82rem;margin-top:8px;display:none"></div>
   <button class="run-btn" id="run-btn">Run simulation</button>
@@ -293,10 +318,11 @@ function simOne(intake, p) {
   for (var ki = 0; ki < progKeys.length; ki++) {
     var key = progKeys[ki];
     var prog = PROG[key];
+    var electives = (key === 'SKS' && p.sksElectives !== undefined) ? p.sksElectives : prog.electives;
     var semRows = [];
 
-    for (var ei = 0; ei < prog.electives.length; ei++) {
-      var e = prog.electives[ei];
+    for (var ei = 0; ei < electives.length; ei++) {
+      var e = electives[ei];
       var yr = acYear(e.sem);
       var trm = termOf(e.sem);
       var raw = cohortSize(intake, yr, dropPct, dTime);
@@ -378,7 +404,15 @@ function getParams() {
   var dTime = dtEl ? dtEl.value : 'year';
   var internPct = parseInt(document.getElementById('sl-intern').value, 10);
   var intake = parseInt(document.getElementById('sl-intake').value, 10);
-  return {minE: minE, maxE: maxE, obj: obj, dropPct: dropPct, dTime: dTime, internPct: internPct, intake: intake};
+  var sksElectives = [];
+  for (var s = 1; s <= 10; s++) {
+    var sksEl = document.getElementById('sks-s' + s);
+    var cnt = sksEl ? (parseInt(sksEl.value, 10) || 0) : 0;
+    if (cnt > 0) {
+      sksElectives.push({sem: s, ects: 10, slots: cnt, name: cnt === 1 ? 'Valgfag' : 'Valgfag (\xd7' + cnt + ')'});
+    }
+  }
+  return {minE: minE, maxE: maxE, obj: obj, dropPct: dropPct, dTime: dTime, internPct: internPct, intake: intake, sksElectives: sksElectives};
 }
 
 function runSim() {
