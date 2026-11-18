@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elective Course Simulator — PF vs SKS</title>
+<style>
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --pf: #2563eb;
+  --sks: #dc2626;
+  --pf-light: #dbeafe;
+  --sks-light: #fee2e2;
+  --warn: #d97706;
+  --warn-bg: #fefce8;
+  --err: #dc2626;
+  --err-bg: #fef2f2;
+  --ok: #16a34a;
+  --ok-bg: #f0fdf4;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --pf: #60a5fa;
+    --sks: #f87171;
+    --pf-light: #1e3356;
+    --sks-light: #561e1e;
+    --warn-bg: #422006;
+    --err-bg: #450a0a;
+    --ok-bg: #052e16;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px}
+header h1{font-size:1.2rem;font-weight:700}
+header p{color:var(--muted);font-size:.85rem;margin-top:2px}
+main{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.card h2{font-size:1rem;font-weight:700;margin-bottom:14px}
+.card h3{font-size:.9rem;font-weight:600;margin:10px 0 6px}
+
+/* Controls */
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:620px){.ctrl-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px}
+.field>label{font-size:.85rem;font-weight:500}
+.hint{font-size:.75rem;color:var(--muted);margin-top:2px}
+.val{font-weight:700;color:var(--pf)}
+input[type=range]{width:100%;accent-color:var(--pf)}
+input[type=number]{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 9px;font-size:.85rem;width:100%}
+input[type=number]:focus{outline:2px solid var(--pf);border-color:transparent}
+.row{display:flex;align-items:center;gap:10px}
+.row input[type=range]{flex:1}
+.row span{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.rgroup{display:flex;gap:14px;flex-wrap:wrap}
+.rgroup label{display:flex;align-items:center;gap:5px;font-size:.85rem;cursor:pointer}
+.run-btn{background:var(--pf);color:#fff;border:none;border-radius:6px;padding:9px 24px;font-size:.95rem;font-weight:600;cursor:pointer;margin-top:10px}
+.run-btn:hover{opacity:.9}
+.run-btn:focus{outline:3px solid var(--pf);outline-offset:2px}
+
+/* Tables */
+.twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--bg);padding:7px 10px;text-align:right;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap}
+th:first-child,th.lft{text-align:left}
+td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:right}
+td:first-child,td.lft{text-align:left}
+tr:last-child td{border-bottom:none}
+tr.sel td{background:var(--pf-light)}
+tr.infeas td{background:var(--err-bg)}
+.pfc{color:var(--pf);font-weight:600}
+.sksc{color:var(--sks);font-weight:600}
+.ok-b{display:inline-block;background:var(--ok-bg);color:var(--ok);border-radius:3px;font-size:.7rem;padding:1px 5px}
+.err-b{display:inline-block;background:var(--err-bg);color:var(--err);border-radius:3px;font-size:.7rem;padding:1px 5px;border:1px solid var(--err)}
+.warn-b{display:inline-block;background:var(--warn-bg);color:var(--warn);border-radius:3px;font-size:.7rem;padding:1px 5px;border:1px solid var(--warn)}
+
+/* Breakdown grid */
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:720px){.bgrid{grid-template-columns:1fr}}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:14px;gap:0}
+.tab{background:none;border:none;padding:7px 16px;font-size:.88rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.on{color:var(--pf);border-bottom-color:var(--pf);font-weight:600}
+
+/* Chart */
+.chart-wrap{overflow-x:auto}
+.legend{display:flex;gap:16px;margin-top:8px;font-size:.82rem}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.swatch{width:13px;height:13px;border-radius:2px;display:inline-block}
+
+/* Export */
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.exp-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:.85rem;cursor:pointer;color:var(--text)}
+.exp-btn:hover{background:var(--bg)}
+
+/* Note */
+.note{background:var(--bg);border-left:3px solid var(--pf);padding:9px 13px;border-radius:0 6px 6px 0;font-size:.78rem;color:var(--muted);margin-top:12px}
+
+/* Tests */
+details summary{cursor:pointer;font-weight:600;padding:6px 0}
+.t-pass{color:var(--ok)}
+.t-fail{color:var(--err);font-weight:700}
+.trow{font-size:.78rem;padding:2px 0;font-family:monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>Elective Course Simulator — PF vs SKS</h1>
+  <p>Comparing existing Politik og Forvaltning (PF) and proposed Statskundskab (SKS) elective structures at steady state</p>
+</header>
+<main>
+
+<div class="card">
+  <h2>Parameters</h2>
+  <div class="ctrl-grid">
+    <div class="field">
+      <label for="sl-intake">Annual intake: <span class="val" id="v-intake">75</span></label>
+      <div class="row">
+        <span>50</span>
+        <input type="range" id="sl-intake" min="50" max="100" step="5" value="75" aria-label="Annual intake">
+        <span>100</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="sl-intern">Sem 9 on internship: <span class="val" id="v-intern">25</span>%</label>
+      <div class="row">
+        <span>0%</span>
+        <input type="range" id="sl-intern" min="0" max="100" step="5" value="25" aria-label="Semester 9 internship">
+        <span>100%</span>
+      </div>
+      <span class="hint">Internship students do not demand electives — not counted as dropouts</span>
+    </div>
+    <div class="field">
+      <label>Min enrollment per offering</label>
+      <input type="number" id="n-min" value="20" min="1" max="200">
+    </div>
+    <div class="field">
+      <label>Max enrollment per offering</label>
+      <input type="number" id="n-max" value="30" min="1" max="400">
+    </div>
+    <div class="field">
+      <label>Planning objective</label>
+      <div class="rgroup">
+        <label><input type="radio" name="obj" value="max" checked> Maximise offerings</label>
+        <label><input type="radio" name="obj" value="min"> Minimise offerings</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>Annual dropout (%)</label>
+      <input type="number" id="n-drop" value="0" min="0" max="99" step="0.5">
+      <div class="rgroup" style="margin-top:5px">
+        <label><input type="radio" name="dtime" value="year" checked> Per academic year</label>
+        <label><input type="radio" name="dtime" value="sem"> Per semester</label>
+      </div>
+    </div>
+  </div>
+  <div id="ctrl-err" style="color:var(--err);font-size:.82rem;margin-top:8px;display:none"></div>
+  <button class="run-btn" onclick="runSim()">Run simulation</button>
+</div>
+
+<div class="card">
+  <h2>Annual summary — all intake sizes</h2>
+  <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Click a row to select that intake for the breakdown below.</p>
+  <div class="twrap" id="tbl-annual"></div>
+  <div class="note">
+    <strong>Pooling logic:</strong> Within each programme, 10-ECTS elective demands from different study semesters that fall in the same calendar term (autumn or spring) are pooled. 5-ECTS demands are pooled separately. Offerings = number of course sections that satisfy the enrollment window [min, max] and timetable constraints. Autumn = odd semesters; Spring = even semesters.
+  </div>
+</div>
+
+<div class="card">
+  <h2 id="breakdown-title">Semester breakdown — intake 75</h2>
+  <div class="tabs">
+    <button class="tab on" id="tab-sem" onclick="showTab('sem')">Semester detail</button>
+    <button class="tab" id="tab-pools" onclick="showTab('pools')">Calendar pools</button>
+  </div>
+  <div id="panel-sem"><div class="bgrid" id="sem-grid"></div></div>
+  <div id="panel-pools" style="display:none"><div id="pools-content"></div></div>
+</div>
+
+<div class="card">
+  <h2 id="chart-title">Offerings by calendar pool — intake 75</h2>
+  <div class="chart-wrap" id="chart-wrap"></div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--pf)"></span>PF (Politik og Forvaltning)</span>
+    <span><span class="swatch" style="background:var(--sks)"></span>SKS (Statskundskab)</span>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="exp-btn" onclick="doExport('annual')">Export annual summary (CSV)</button>
+  <button class="exp-btn" onclick="doExport('detail')">Export semester detail (CSV)</button>
+</div>
+
+<div class="card">
+  <details>
+    <summary>Automated test results</summary>
+    <div id="test-out" style="margin-top:10px"></div>
+  </details>
+</div>
+
+</main>
+<script>
+// ── Programme definitions ──────────────────────────────────────
+const PROG = {
+  PF: {
+    label: 'PF (Politik og Forvaltning)',
+    electives: [
+      {sem:3, ects:5, slots:1},
+      {sem:6, ects:5, slots:1},
+      {sem:7, ects:10, slots:1},
+      {sem:8, ects:10, slots:1},
+      {sem:9, ects:10, slots:1}
+    ]
+  },
+  SKS: {
+    label: 'SKS (Statskundskab)',
+    electives: [
+      {sem:5, ects:10, slots:1},
+      {sem:7, ects:10, slots:2},
+      {sem:8, ects:10, slots:3},
+      {sem:9, ects:10, slots:3}
+    ]
+  }
+};
+
+function acYear(sem){ return Math.ceil(sem/2); }
+function term(sem){ return sem%2===1 ? 'Autumn' : 'Spring'; }
+
+// ── Cohort size ────────────────────────────────────────────────
+function cohortSize(intake, year, dropPct, dTime){
+  if(dropPct<=0) return intake;
+  if(dTime==='year') return intake * Math.pow(1 - dropPct/100, year-1);
+  const sems = (year-1)*2;
+  return intake * Math.pow(1 - dropPct/200, sems);
+}
+
+// ── Core: offerings for a pool ─────────────────────────────────
+function offeringsForPool(S, maxK, minE, maxE, obj){
+  if(S<=0) return {c:0, feasible:true, note:''};
+  const cMinCap = Math.ceil(S / maxE);
+  const cMaxCap = Math.floor(S / minE);
+  const cMin = Math.max(cMinCap, maxK);
+  if(cMin > cMaxCap || cMaxCap < 1){
+    return {
+      c: cMin,
+      feasible: false,
+      note: `Infeasible: need ≥${cMin} sections (enrollment/timetable) but max feasible is ${Math.max(0,cMaxCap)} (S=${S.toFixed(1)}, bounds [${minE},${maxE}])`
+    };
+  }
+  return {c: obj==='max' ? cMaxCap : cMin, feasible:true, note:''};
+}
+
+// ── Simulate one intake ────────────────────────────────────────
+function simOne(intake, p){
+  const {minE, maxE, obj, dropPct, dTime, internPct} = p;
+  const out = {};
+
+  for(const [key, prog] of Object.entries(PROG)){
+    const semRows = prog.electives.map(e => {
+      const yr = acYear(e.sem);
+      const raw = cohortSize(intake, yr, dropPct, dTime);
+      let active = raw, internNote = '';
+      if(e.sem===9){
+        active = Math.round(raw * (1 - internPct/100));
+        internNote = `${(raw-active).toFixed(1)} on internship; active=${active} (Math.round)`;
+      }
+      return {sem:e.sem, yr, term:term(e.sem), ects:e.ects, slots:e.slots, raw, active, seats:active*e.slots, internNote};
+    });
+
+    // Pool by term+ects
+    const pools = {};
+    for(const r of semRows){
+      const pk = `${r.term}-${r.ects}`;
+      if(!pools[pk]) pools[pk] = {term:r.term, ects:r.ects, seats:0, sems:[], maxK:0};
+      pools[pk].seats += r.seats;
+      pools[pk].sems.push(r.sem);
+      pools[pk].maxK = Math.max(pools[pk].maxK, r.slots);
+    }
+
+    // Compute offerings per pool
+    let totalC=0, totalEcts=0, anyInfeas=false;
+    const poolRes = {};
+    for(const [pk, pool] of Object.entries(pools)){
+      const res = offeringsForPool(pool.seats, pool.maxK, minE, maxE, obj);
+      poolRes[pk] = {...pool, ...res};
+      totalC += res.c;
+      totalEcts += res.c * pool.ects;
+      if(!res.feasible) anyInfeas = true;
+    }
+
+    const autC = Object.entries(poolRes).filter(([k])=>k.startsWith('Autumn')).reduce((s,[,r])=>s+r.c,0);
+    const sprC = Object.entries(poolRes).filter(([k])=>k.startsWith('Spring')).reduce((s,[,r])=>s+r.c,0);
+
+    out[key] = {semRows, poolRes, totalC, totalEcts, autC, sprC, anyInfeas};
+  }
+  return {intake, ...out};
+}
+
+// ── Global state ───────────────────────────────────────────────
+let gAll = null;
+let gSel = 75;
+let gP = null;
+
+function getParams(){
+  const minE = parseInt(document.getElementById('n-min').value)||20;
+  const maxE = parseInt(document.getElementById('n-max').value)||30;
+  const obj = document.querySelector('input[name=obj]:checked').value;
+  const dropPct = parseFloat(document.getElementById('n-drop').value)||0;
+  const dTime = document.querySelector('input[name=dtime]:checked').value;
+  const internPct = parseInt(document.getElementById('sl-intern').value);
+  const intake = parseInt(document.getElementById('sl-intake').value);
+  return {minE, maxE, obj, dropPct, dTime, internPct, intake};
+}
+
+function runSim(){
+  const p = getParams();
+  const errEl = document.getElementById('ctrl-err');
+  if(p.minE > p.maxE){
+    errEl.style.display='';
+    errEl.textContent='Error: min enrollment cannot exceed max enrollment.';
+    return;
+  }
+  errEl.style.display='none';
+  gSel = p.intake;
+  gP = p;
+  gAll = {};
+  for(let n=50; n<=100; n+=5) gAll[n] = simOne(n, p);
+  renderAnnual();
+  renderBreakdown();
+  renderChart();
+  runTests();
+}
+
+// ── Render: annual table ───────────────────────────────────────
+function renderAnnual(){
+  let h = `<table>
+    <thead><tr>
+      <th class="lft">Intake</th>
+      <th class="pfc">PF Autumn</th><th class="pfc">PF Spring</th>
+      <th class="pfc">PF Total</th><th class="pfc">PF ECTS</th>
+      <th class="sksc">SKS Autumn</th><th class="sksc">SKS Spring</th>
+      <th class="sksc">SKS Total</th><th class="sksc">SKS ECTS</th>
+      <th>Δ SKS−PF</th><th class="lft">Issues</th>
+    </tr></thead><tbody>`;
+
+  for(let n=50; n<=100; n+=5){
+    const r = gAll[n];
+    const pf=r.PF, sks=r.SKS;
+    const diff = sks.totalC - pf.totalC;
+    const sel = n===gSel;
+    const issues = [];
+    for(const [pk,pool] of Object.entries(pf.poolRes)) if(!pool.feasible) issues.push(`<span class="err-b" title="${esc(pool.note)}">PF ${pk}</span>`);
+    for(const [pk,pool] of Object.entries(sks.poolRes)) if(!pool.feasible) issues.push(`<span class="err-b" title="${esc(pool.note)}">SKS ${pk}</span>`);
+    h += `<tr class="${sel?'sel':''}" onclick="selIntake(${n})" style="cursor:pointer">
+      <td class="lft"><strong>${n}</strong></td>
+      <td>${pf.autC}</td><td>${pf.sprC}</td>
+      <td><strong>${pf.totalC}</strong></td><td>${pf.totalEcts}</td>
+      <td>${sks.autC}</td><td>${sks.sprC}</td>
+      <td><strong>${sks.totalC}</strong></td><td>${sks.totalEcts}</td>
+      <td><strong>${diff>=0?'+':''}${diff}</strong></td>
+      <td class="lft">${issues.length?issues.join(' '):'<span class="ok-b">OK</span>'}</td>
+    </tr>`;
+  }
+  h += `</tbody></table>`;
+  document.getElementById('tbl-annual').innerHTML = h;
+}
+
+function selIntake(n){
+  gSel = n;
+  document.getElementById('sl-intake').value = n;
+  document.getElementById('v-intake').textContent = n;
+  renderAnnual();
+  renderBreakdown();
+  renderChart();
+}
+
+// ── Render: semester breakdown + pools ────────────────────────
+function renderBreakdown(){
+  document.getElementById('breakdown-title').textContent = `Semester breakdown — intake ${gSel}`;
+  const r = gAll[gSel];
+
+  // Semester detail panel
+  let semHtml = '';
+  for(const [key, prog] of [['PF',r.PF],['SKS',r.SKS]]){
+    const cls = key==='PF' ? 'pfc' : 'sksc';
+    semHtml += `<div>
+      <h3 class="${cls}">${PROG[key].label}</h3>
+      <div class="twrap"><table>
+        <thead><tr>
+          <th class="lft">Sem</th><th class="lft">Term</th>
+          <th>Enrolled</th><th>Active</th>
+          <th>Slots/student</th><th>Seat demand</th><th>ECTS type</th>
+        </tr></thead><tbody>`;
+    for(const d of prog.semRows){
+      const warn = d.sem===9 && gP.internPct>0 ? `<span class="warn-b" title="${esc(d.internNote)}">intern</span>` : '';
+      semHtml += `<tr>
+        <td class="lft">${d.sem}</td><td class="lft">${d.term}</td>
+        <td>${d.raw.toFixed(1)}</td>
+        <td>${d.active.toFixed(d.sem===9?0:1)} ${warn}</td>
+        <td>${d.slots}</td>
+        <td>${d.seats.toFixed(1)}</td>
+        <td>${d.ects}-ECTS</td>
+      </tr>`;
+    }
+    semHtml += `</tbody></table></div>`;
+    const d9 = prog.semRows.find(d=>d.sem===9);
+    if(d9 && gP.internPct>0) semHtml += `<p class="hint" style="margin-top:4px">${d9.internNote}</p>`;
+    semHtml += `</div>`;
+  }
+  document.getElementById('sem-grid').innerHTML = semHtml;
+
+  // Pools panel
+  let poolHtml = `<div class="bgrid">`;
+  for(const [key, prog] of [['PF',r.PF],['SKS',r.SKS]]){
+    const cls = key==='PF' ? 'pfc' : 'sksc';
+    poolHtml += `<div>
+      <h3 class="${cls}">${PROG[key].label} — calendar pools</h3>
+      <div class="twrap"><table>
+        <thead><tr>
+          <th class="lft">Term</th><th>ECTS</th><th class="lft">Sems pooled</th>
+          <th>Total seats</th><th>Max slots/student</th><th>Offerings</th><th class="lft">Status</th>
+        </tr></thead><tbody>`;
+    for(const [pk, pool] of Object.entries(prog.poolRes)){
+      poolHtml += `<tr class="${!pool.feasible?'infeas':''}">
+        <td class="lft">${pool.term}</td>
+        <td>${pool.ects}-ECTS</td>
+        <td class="lft">${pool.sems.join(', ')}</td>
+        <td>${pool.seats.toFixed(1)}</td>
+        <td>${pool.maxK}</td>
+        <td><strong>${pool.c}</strong></td>
+        <td class="lft">${pool.feasible ? '<span class="ok-b">OK</span>' : `<span class="err-b">Infeasible</span>`}</td>
+      </tr>`;
+      if(!pool.feasible) poolHtml += `<tr><td colspan="7" style="font-size:.74rem;color:var(--err);padding:2px 10px 7px;text-align:left">${esc(pool.note)}</td></tr>`;
+    }
+    poolHtml += `</tbody></table></div></div>`;
+  }
+  poolHtml += `</div>`;
+  poolHtml += `<div class="note">
+    <strong>Why semester demand ≠ calendar provision:</strong> Multiple study semesters that fall in the same calendar term (e.g. PF sems 7 and 9 both in Autumn) are pooled. The number of sections is determined for the combined seat demand, not per study semester. For SKS, three study semesters (5, 7, 9) all contribute autumn 10-ECTS demand; a year-5 student needing 3 electives in autumn also sets the minimum section count (timetable constraint ≥ max slots/student).
+  </div>`;
+  document.getElementById('pools-content').innerHTML = poolHtml;
+}
+
+function showTab(t){
+  ['sem','pools'].forEach(x=>{
+    document.getElementById('panel-'+x).style.display = x===t ? '' : 'none';
+    document.getElementById('tab-'+x).classList.toggle('on', x===t);
+  });
+}
+
+// ── Render: SVG chart ──────────────────────────────────────────
+function renderChart(){
+  document.getElementById('chart-title').textContent = `Offerings by calendar pool — intake ${gSel}`;
+  const r = gAll[gSel];
+
+  // Collect all pool keys from both programmes
+  const allKeys = new Set();
+  for(const [,pool] of Object.entries(r.PF.poolRes)) allKeys.add(`${pool.term} ${pool.ects}-ECTS`);
+  for(const [,pool] of Object.entries(r.SKS.poolRes)) allKeys.add(`${pool.term} ${pool.ects}-ECTS`);
+  const labels = [...allKeys].sort();
+
+  function getVal(prog, lbl){
+    for(const [,pool] of Object.entries(prog.poolRes)){
+      if(`${pool.term} ${pool.ects}-ECTS`===lbl) return pool.c;
+    }
+    return 0;
+  }
+
+  const pfV = labels.map(l=>getVal(r.PF,l));
+  const sksV = labels.map(l=>getVal(r.SKS,l));
+  const maxV = Math.max(...pfV,...sksV,1);
+
+  const nGroups = labels.length;
+  const W = Math.max(480, nGroups*110);
+  const H = 240;
+  const ML=44,MB=58,MT=22,MR=18;
+  const PW=W-ML-MR, PH=H-MT-MB;
+  const gW = PW/nGroups;
+  const bW = Math.min(30, (gW-14)/2);
+  const PF_COL='#2563eb', SKS_COL='#dc2626';
+
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-label="Grouped bar chart: offerings by calendar pool">`;
+
+  // Gridlines + Y ticks
+  for(let i=0;i<=5;i++){
+    const v = +(maxV*i/5).toFixed(0);
+    const y = MT + PH - PH*i/5;
+    svg += `<line x1="${ML}" x2="${W-MR}" y1="${y}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
+    svg += `<text x="${ML-5}" y="${y+4}" text-anchor="end" font-size="11" fill="#9ca3af">${v}</text>`;
+  }
+
+  // Y-axis label
+  svg += `<text x="12" y="${MT+PH/2}" text-anchor="middle" font-size="11" fill="#9ca3af" transform="rotate(-90,12,${MT+PH/2})">Offerings</text>`;
+
+  // Bars
+  labels.forEach((lbl,i)=>{
+    const cx = ML + i*gW + gW/2;
+    const pX=cx-bW-2, sX=cx+2;
+    const pH=pfV[i]/maxV*PH, sH=sksV[i]/maxV*PH;
+    const pY=MT+PH-pH, sY=MT+PH-sH;
+
+    if(pfV[i]>0){
+      svg += `<rect x="${pX}" y="${pY}" width="${bW}" height="${pH}" fill="${PF_COL}" rx="2"><title>PF — ${lbl}: ${pfV[i]}</title></rect>`;
+      svg += `<text x="${pX+bW/2}" y="${pY-3}" text-anchor="middle" font-size="10" fill="${PF_COL}">${pfV[i]}</text>`;
+    }
+    if(sksV[i]>0){
+      svg += `<rect x="${sX}" y="${sY}" width="${bW}" height="${sH}" fill="${SKS_COL}" rx="2"><title>SKS — ${lbl}: ${sksV[i]}</title></rect>`;
+      svg += `<text x="${sX+bW/2}" y="${sY-3}" text-anchor="middle" font-size="10" fill="${SKS_COL}">${sksV[i]}</text>`;
+    }
+
+    const short = lbl.replace('Autumn','Aut').replace('Spring','Spr');
+    svg += `<text x="${cx}" y="${H-MB+16}" text-anchor="middle" font-size="11" fill="#6b7280">${short}</text>`;
+    svg += `<line x1="${cx}" x2="${cx}" y1="${MT+PH}" y2="${MT+PH+4}" stroke="#9ca3af" stroke-width="1"/>`;
+  });
+
+  // Axes
+  svg += `<line x1="${ML}" x2="${ML}" y1="${MT}" y2="${MT+PH}" stroke="#9ca3af" stroke-width="1.5"/>`;
+  svg += `<line x1="${ML}" x2="${W-MR}" y1="${MT+PH}" y2="${MT+PH}" stroke="#9ca3af" stroke-width="1.5"/>`;
+  svg += `</svg>`;
+  document.getElementById('chart-wrap').innerHTML = svg;
+}
+
+// ── CSV export ─────────────────────────────────────────────────
+function doExport(type){
+  if(!gAll) return;
+  let csv='';
+  if(type==='annual'){
+    csv='Intake,PF Autumn,PF Spring,PF Total,PF ECTS,SKS Autumn,SKS Spring,SKS Total,SKS ECTS,Diff (SKS-PF),PF Issues,SKS Issues\n';
+    for(let n=50;n<=100;n+=5){
+      const r=gAll[n];
+      const pfIss=Object.values(r.PF.poolRes).filter(p=>!p.feasible).map(p=>p.note).join('; ');
+      const sksIss=Object.values(r.SKS.poolRes).filter(p=>!p.feasible).map(p=>p.note).join('; ');
+      csv+=`${n},${r.PF.autC},${r.PF.sprC},${r.PF.totalC},${r.PF.totalEcts},${r.SKS.autC},${r.SKS.sprC},${r.SKS.totalC},${r.SKS.totalEcts},${r.SKS.totalC-r.PF.totalC},"${pfIss}","${sksIss}"\n`;
+    }
+  } else {
+    const r=gAll[gSel];
+    csv='Programme,Sem,Acad Year,Term,Enrolled,Active,Slots/student,Seat demand,ECTS\n';
+    for(const [k,prog] of [['PF',r.PF],['SKS',r.SKS]]){
+      for(const d of prog.semRows) csv+=`${k},${d.sem},${d.yr},${d.term},${d.raw.toFixed(2)},${d.active.toFixed(2)},${d.slots},${d.seats.toFixed(2)},${d.ects}\n`;
+    }
+    csv+='\nProgramme,Pool,Sems pooled,Total seats,Max slots,Offerings,Feasible,Note\n';
+    for(const [k,prog] of [['PF',r.PF],['SKS',r.SKS]]){
+      for(const [pk,pool] of Object.entries(prog.poolRes)){
+        csv+=`${k},${pk},"${pool.sems.join(';')}",${pool.seats.toFixed(2)},${pool.maxK},${pool.c},${pool.feasible?'OK':'INFEASIBLE'},"${pool.note}"\n`;
+      }
+    }
+  }
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`elective-sim-${type}-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── Automated tests ────────────────────────────────────────────
+function runTests(){
+  const def = {minE:20, maxE:30, obj:'max', dropPct:0, dTime:'year', internPct:25};
+  const tests = [];
+
+  function chk(label, got, exp, tol){
+    const pass = tol!=null ? Math.abs(got-exp)<=tol : got===exp;
+    tests.push({label, pass, got, exp});
+  }
+
+  // 1. Internship rounding: round(75*0.75) = round(56.25) = 56
+  chk('Sem9 active students (intake=75, intern=25%)', Math.round(75*(1-0.25)), 56);
+
+  // 2. PF Autumn-10 seats: sem7=75*1=75, sem9=56*1=56 → 131
+  const r75 = simOne(75, def);
+  const pfA10 = r75.PF.poolRes['Autumn-10'];
+  chk('PF Autumn-10 total seats (intake=75, intern=25%)', pfA10 ? Math.round(pfA10.seats) : -1, 131);
+
+  // 3. PF Autumn-10 offerings (maximize): cMax=floor(131/20)=6
+  chk('PF Autumn-10 offerings maximize', pfA10 ? pfA10.c : -1, 6);
+
+  // 4. PF Autumn-10 offerings (minimize): cMin=max(ceil(131/30),1)=5
+  const r75min = simOne(75, {...def, obj:'min'});
+  const pfA10m = r75min.PF.poolRes['Autumn-10'];
+  chk('PF Autumn-10 offerings minimize', pfA10m ? pfA10m.c : -1, 5);
+
+  // 5. SKS Autumn-10 seats: sem5=75, sem7=150, sem9=56*3=168 → 393
+  const sksA10 = r75.SKS.poolRes['Autumn-10'];
+  chk('SKS Autumn-10 total seats (intake=75, intern=25%)', sksA10 ? Math.round(sksA10.seats) : -1, 393);
+
+  // 6. SKS Autumn-10 offerings (max): cMax=floor(393/20)=19
+  chk('SKS Autumn-10 offerings maximize', sksA10 ? sksA10.c : -1, 19);
+
+  // 7. SKS Autumn-10 minimize: cMin=max(ceil(393/30),3)=max(14,3)=14
+  const r75mSKS = simOne(75, {...def, obj:'min'});
+  chk('SKS Autumn-10 offerings minimize', r75mSKS.SKS.poolRes['Autumn-10']?.c ?? -1, 14);
+
+  // 8. SKS Spring-10 seats: sem8=75*3=225; maximize: floor(225/20)=11
+  const sksS10 = r75.SKS.poolRes['Spring-10'];
+  chk('SKS Spring-10 seats (intake=75)', sksS10 ? sksS10.seats : -1, 225);
+  chk('SKS Spring-10 offerings maximize', sksS10 ? sksS10.c : -1, 11);
+
+  // 9. PF Spring-10 seats: sem8=75*1=75; floor(75/20)=3
+  const pfS10 = r75.PF.poolRes['Spring-10'];
+  chk('PF Spring-10 offerings (intake=75)', pfS10 ? pfS10.c : -1, 3);
+
+  // 10. PF autumn/spring 5-ECTS: each 75 seats, floor(75/20)=3
+  const pfA5 = r75.PF.poolRes['Autumn-5'];
+  const pfS5 = r75.PF.poolRes['Spring-5'];
+  chk('PF Autumn-5 offerings (intake=75)', pfA5 ? pfA5.c : -1, 3);
+  chk('PF Spring-5 offerings (intake=75)', pfS5 ? pfS5.c : -1, 3);
+
+  // 11. Infeasible: S=35, [20,30] → cMin=ceil(35/30)=2, cMax=floor(35/20)=1 → infeasible
+  const infeas = offeringsForPool(35, 1, 20, 30, 'max');
+  chk('Infeasible partition (S=35, [20,30])', infeas.feasible, false);
+
+  // 12. Feasibility gap boundary: S=40 → cMin=2, cMax=2 → feasible
+  const feas40 = offeringsForPool(40, 1, 20, 30, 'max');
+  chk('Feasible (S=40, [20,30])', feas40.feasible, true);
+  chk('Offerings S=40 maximize', feas40.c, 2);
+
+  // 13. Timetable constraint makes it infeasible: S=30, maxK=3, [20,30]
+  //     cMin=max(ceil(30/30),3)=max(1,3)=3; cMax=floor(30/20)=1 → infeasible
+  const timetable = offeringsForPool(30, 3, 20, 30, 'max');
+  chk('Timetable infeasible (S=30, maxK=3, [20,30])', timetable.feasible, false);
+
+  // 14. 0% internship: sem9 active = 75
+  const r75_0i = simOne(75, {...def, internPct:0});
+  const pf9 = r75_0i.PF.semRows.find(d=>d.sem===9);
+  chk('Sem9 active students with 0% internship', pf9 ? pf9.active : -1, 75);
+
+  // 15. 100% internship: sem9 seat demand = 0
+  const r75_100i = simOne(75, {...def, internPct:100});
+  const pf9full = r75_100i.PF.semRows.find(d=>d.sem===9);
+  chk('Sem9 seat demand with 100% internship', pf9full ? pf9full.seats : -1, 0);
+
+  // 16. Dropout: intake=100, 20% annual dropout → year 5 cohort = 100*(0.8)^4 = 40.96
+  const rDrop = simOne(100, {...def, dropPct:20, internPct:0});
+  const pf9drop = rDrop.PF.semRows.find(d=>d.sem===9);
+  chk('Year5 cohort with 20% annual dropout (intake=100)', pf9drop ? pf9drop.raw : -1, 100*Math.pow(0.8,4), 0.01);
+
+  const passed = tests.filter(t=>t.pass).length;
+  document.getElementById('test-out').innerHTML =
+    `<p style="font-weight:600;margin-bottom:8px">${passed}/${tests.length} tests passed</p>` +
+    tests.map(t=>`<div class="trow ${t.pass?'t-pass':'t-fail'}">${t.pass?'✓':'✗'} ${t.label} — got ${typeof t.got==='number'?t.got.toFixed?.(4):t.got}, expected ${t.exp}</div>`).join('');
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// ── Slider sync ────────────────────────────────────────────────
+document.getElementById('sl-intake').addEventListener('input', function(){ document.getElementById('v-intake').textContent=this.value; });
+document.getElementById('sl-intern').addEventListener('input', function(){ document.getElementById('v-intern').textContent=this.value; });
+
+// ── Initial run ────────────────────────────────────────────────
+runSim();
+</script>
+</body>
+</html>
